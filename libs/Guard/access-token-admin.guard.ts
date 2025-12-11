@@ -8,14 +8,14 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
 @Injectable()
-export class JwtCookieGuard implements CanActivate {
+export class AccessTokenAdminGuard implements CanActivate {
     constructor(private readonly jwtService: JwtService) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest<Request>();
 
         const token = request.cookies?.['access_token'];
-        
+
         if (!token) throw new UnauthorizedException('Please log in first');
 
         try {
@@ -23,8 +23,12 @@ export class JwtCookieGuard implements CanActivate {
                 secret: process.env.JWT_SECRET, // nhớ set env
             });
 
+            if(payload.role !== 'admin'){
+                throw new UnauthorizedException('Admin access required')
+            }
+
             // gắn info user vào request
-            request['user'] = payload;
+            request['admin'] = payload;
 
             return true;
         } catch (err) {

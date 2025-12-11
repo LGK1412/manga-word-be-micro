@@ -24,7 +24,35 @@ import { JwtModule } from '@nestjs/jwt';
         options: {
           servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
         }
-      }
+      },
+      {
+        name: 'NOTIFICATION_SERVICE',
+        transport: Transport.NATS,
+        options: {
+          servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
+        }
+      },
+      {
+        name: 'STORY_SERVICE',
+        transport: Transport.NATS,
+        options: {
+          servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
+        }
+      },
+      {
+        name: 'GENRE_SERVICE',
+        transport: Transport.NATS,
+        options: {
+          servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
+        }
+      },
+      {
+        name: 'STYLE_SERVICE',
+        transport: Transport.NATS,
+        options: {
+          servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
+        }
+      },
     ]),
 
     JwtModule.register({

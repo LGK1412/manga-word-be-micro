@@ -43,6 +43,15 @@
         "tsConfigPath": "apps/gateway/tsconfig.app.json"
       }
     },
+    "genre": {
+      "type": "application",
+      "root": "apps/genre",
+      "entryFile": "main",
+      "sourceRoot": "apps/genre/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/genre/tsconfig.app.json"
+      }
+    },
     "notification": {
       "type": "application",
       "root": "apps/notification",
@@ -50,6 +59,24 @@
       "sourceRoot": "apps/notification/src",
       "compilerOptions": {
         "tsConfigPath": "apps/notification/tsconfig.app.json"
+      }
+    },
+    "story": {
+      "type": "application",
+      "root": "apps/story",
+      "entryFile": "main",
+      "sourceRoot": "apps/story/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/story/tsconfig.app.json"
+      }
+    },
+    "style": {
+      "type": "application",
+      "root": "apps/style",
+      "entryFile": "main",
+      "sourceRoot": "apps/style/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/style/tsconfig.app.json"
       }
     },
     "user": {
