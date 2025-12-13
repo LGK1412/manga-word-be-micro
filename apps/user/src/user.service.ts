@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'libs/Schema/user/user.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 @Injectable()
 export class UserService {
@@ -96,7 +96,7 @@ export class UserService {
     return { success: true };
   }
 
-  async createUserGoogle(username: string, email: string, verified: boolean, google_id: string, avatar: string){
+  async createUserGoogle(username: string, email: string, verified: boolean, google_id: string, avatar: string) {
     try {
       const newUser = new this.userModel({
         username,
@@ -105,13 +105,18 @@ export class UserService {
         google_id,
         avatar
       });
-      console.log(newUser)
+
       return await newUser.save();
     } catch (error) {
       if (error.code === 11000 && error.keyPattern?.email) {
-        return { success: false, message: 'Can not create user with this google account'}
+        return { success: false, message: 'Can not create user with this google account' }
       }
-      return { success: false, message: 'Can not create user with this google account'}
+      return { success: false, message: 'Can not create user with this google account' }
     }
   }
+
+  async getUserById(id: string) {
+    return await this.userModel.findById(id);
+  }
+
 }

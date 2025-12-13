@@ -15,4 +15,9 @@ export class GenreController {
   async updateGenre(data: { id: string, name?: string, description?: string }) {
     return await this.genreService.updateGenre(data.id, data.name, data.description)
   }
+
+  @MessagePattern({ cmd: 'validate-genres' })
+  async validateGenre(id: string | string[]) {
+    return await this.genreService.validateGenre(id)
+  }
 }

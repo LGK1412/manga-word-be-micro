@@ -1,6 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Inject, Param, Patch, Post, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
+import * as fs from 'fs';
 import { ChangePasswordDto } from 'libs/Dto/auth/change-password.dto';
 import { EmailDto } from 'libs/Dto/auth/email.dto';
 import { GoogleLoginDto } from 'libs/Dto/auth/google-login.dto';
@@ -12,10 +14,26 @@ import { CreateGenreDto } from 'libs/Dto/genre/create-genre.Schema';
 import { UpdateGenreDto } from 'libs/Dto/genre/update-genre.Schema';
 import { NotiDto } from 'libs/Dto/notification/notiId.dto';
 import { sendNotificationDto } from 'libs/Dto/notification/sendNoti.dto';
+import { CreateStoryDto } from 'libs/Dto/story/create-story.dto';
 import { CreateStyleDto } from 'libs/Dto/style/create-style.dto';
 import { AccessTokenAdminGuard } from 'libs/Guard/access-token-admin.guard';
+import { AccessTokenAuthorGuard } from 'libs/Guard/access-token-author.guard';
 import { AccessTokenGuard } from 'libs/Guard/access-token.guard';
+import { diskStorage, memoryStorage } from 'multer';
+import { extname, join } from 'path';
 import { lastValueFrom } from 'rxjs';
+
+const coverImageInterceptor = FileInterceptor('coverImage', {
+  storage: memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new BadRequestException('File không phải ảnh'), false);
+    }
+    cb(null, true);
+  },
+});
+
 
 @Controller()
 export class GatewayController {
@@ -141,8 +159,60 @@ export class GatewayController {
   // ========== Story routes ==========
 
   @Post('/story/create-story/:author_id')
-  async createStory(@Body() data: any, @Req() req: Request) {
+  @UseInterceptors(coverImageInterceptor)
+  async createStory(@Body() data: CreateStoryDto, @Req() req: Request, @UploadedFile() file: Express.Multer.File, @Param('author_id') author_id: string) {
+    let filename = 'default-cover.png';
 
+    if (file) {
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = extname(file.originalname);
+      filename = `${unique}${ext}`;
+      data.coverImage = filename;
+    }
+
+    const res = await lastValueFrom(
+      this.story.send({ cmd: 'create-story' }, { author_id, ...data }),
+    );
+
+    if (res.success === true) {
+      if (file) {
+        const filepath = join('public/assets/coverImages', filename);
+        await fs.promises.writeFile(filepath, file.buffer);
+      }
+
+      return { success: true, message: res.message || 'Create story successfully' };
+    } else {
+      throw new BadRequestException(res.message || 'Create story failed');
+    }
+  }
+
+  @Post('/story/update-story/:story_id')
+  @UseGuards(AccessTokenAuthorGuard)
+  @UseInterceptors(coverImageInterceptor)
+  async udpateStory(@Body() data: CreateStoryDto, @Req() req: Request, @UploadedFile() file: Express.Multer.File, @Param('story_id') story_id: string) {
+    let filename = 'default-cover.png';
+
+    if (file) {
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = extname(file.originalname);
+      filename = `${unique}${ext}`;
+      data.coverImage = filename;
+    }
+
+    const res = await lastValueFrom(
+      this.story.send({ cmd: 'update-story' }, { author_id: (req as any).author.user_id, story_id, ...data }),
+    );
+
+    if (res.success === true) {
+      if (file) {
+        const filepath = join('public/assets/coverImages', filename);
+        await fs.promises.writeFile(filepath, file.buffer);
+      }
+
+      return { success: true, message: res.message || 'Create story successfully' };
+    } else {
+      throw new BadRequestException(res.message || 'Create story failed');
+    }
   }
 
   // ========== Genre routes ==========

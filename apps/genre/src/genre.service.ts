@@ -45,4 +45,12 @@ export class GenreService {
       message: `Genre udpated sucessfully`
     };
   }
+
+  async validateGenre(genre_id: string | string[]){
+    if(Array.isArray(genre_id)){
+      return await this.genreModel.find({ _id: {$in: genre_id}})
+    }else{
+      return await this.genreModel.findById(genre_id)
+    }
+  }
 }

@@ -57,4 +57,9 @@ export class UserController {
   async createUserGoogle(data: {username: string, email: string, verified: boolean, google_id: string, avatar: string}){
     return await this.userService.createUserGoogle(data.username, data.email, data.verified, data.google_id, data.avatar)
   }
+
+  @MessagePattern({cmd: 'get-user-by-id'})
+  async getUserById(id: string){
+    return await this.userService.getUserById(id)
+  }
 }

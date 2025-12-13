@@ -44,4 +44,8 @@ export class StyleService {
       message: `Style udpated sucessfully`
     };
   }
+
+  async validateStyle(style_id: string){
+    return await this.styleModel.findById(style_id)
+  }
 }

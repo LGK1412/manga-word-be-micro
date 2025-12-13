@@ -15,4 +15,9 @@ export class StyleController {
   async updateStyle(data: { id: string, name: string, description: string, status?: string }) {
     return await this.styleService.updateStyle(data.id, data.name, data.description, data.status)
   }
+
+  @MessagePattern({cmd: 'validate-style'})
+  async validateStyle(style_id: string){
+    return await this.styleService.validateStyle(style_id)
+  }
 }
