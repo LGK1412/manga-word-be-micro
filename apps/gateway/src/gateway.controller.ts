@@ -1,27 +1,32 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Patch, Post, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Inject, Param, Patch, Post, Req, Res, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import * as fs from 'fs';
-import { ChangePasswordDto } from 'libs/Dto/auth/change-password.dto';
-import { EmailDto } from 'libs/Dto/auth/email.dto';
-import { GoogleLoginDto } from 'libs/Dto/auth/google-login.dto';
-import { LoginDto } from 'libs/Dto/auth/login.dto';
-import { PassordRecoveryDto } from 'libs/Dto/auth/password-recovery.dto';
-import { RegisterDto } from 'libs/Dto/auth/register.dto';
-import { VerifyEmailDto } from 'libs/Dto/auth/verifyEmail.dto';
-import { CreateGenreDto } from 'libs/Dto/genre/create-genre.Schema';
-import { UpdateGenreDto } from 'libs/Dto/genre/update-genre.Schema';
-import { NotiDto } from 'libs/Dto/notification/notiId.dto';
-import { sendNotificationDto } from 'libs/Dto/notification/sendNoti.dto';
-import { CreateStoryDto } from 'libs/Dto/story/create-story.dto';
-import { CreateStyleDto } from 'libs/Dto/style/create-style.dto';
+import { ChangePasswordDto } from 'apps/auth/src/Dto/change-password.dto';
+import { EmailDto } from 'apps/auth/src/Dto/email.dto';
+import { GoogleLoginDto } from 'apps/auth/src/Dto/google-login.dto';
+import { LoginDto } from 'apps/auth/src/Dto/login.dto';
+import { PassordRecoveryDto } from 'apps/auth/src/Dto/password-recovery.dto';
+import { RegisterDto } from 'apps/auth/src/Dto/register.dto';
+import { VerifyEmailDto } from 'apps/auth/src/Dto/verifyEmail.dto';
+import { CreateGenreDto } from 'apps/genre/src/Dto/create-genre.Schema';
+import { UpdateGenreDto } from 'apps/genre/src/Dto/update-genre.Schema';
+import { NotiDto } from 'apps/notification/src/Dto/notiId.dto';
+import { sendNotificationDto } from 'apps/notification/src/Dto/sendNoti.dto';
+import { CreateStoryDto } from 'apps/story/src/Dto/create-story.dto';
+import { CreateStyleDto } from 'apps/style/src/Dto/create-style.dto';
 import { AccessTokenAdminGuard } from 'libs/Guard/access-token-admin.guard';
 import { AccessTokenAuthorGuard } from 'libs/Guard/access-token-author.guard';
 import { AccessTokenGuard } from 'libs/Guard/access-token.guard';
-import { diskStorage, memoryStorage } from 'multer';
+import multer, { diskStorage, memoryStorage } from 'multer';
 import { extname, join } from 'path';
 import { lastValueFrom } from 'rxjs';
+import { CreateChapterWithTextDto } from 'apps/chapter/src/Dto/create-chapter-with-text.dto';
+import { UpdateChapterWithTextDto } from 'apps/chapter/src/Dto/update-chapter-with-text.dto';
+import { CreateImageChapterDto } from 'apps/chapter/src/Dto/create-image-chapter.dto';
+import sharp from 'sharp';
+import { UpdateImageChapterDto } from 'apps/chapter/src/Dto/update-image-chapter.dto';
 
 const coverImageInterceptor = FileInterceptor('coverImage', {
   storage: memoryStorage(),
@@ -34,6 +39,16 @@ const coverImageInterceptor = FileInterceptor('coverImage', {
   },
 });
 
+const imageChapterInterceptor = FilesInterceptor('images', 50, {
+  storage: memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new BadRequestException('File không phải ảnh'), false)
+    }
+    cb(null, true)
+  },
+})
 
 @Controller()
 export class GatewayController {
@@ -44,6 +59,7 @@ export class GatewayController {
     @Inject('STORY_SERVICE') private story: ClientProxy,
     @Inject('GENRE_SERVICE') private genre: ClientProxy,
     @Inject('STYLE_SERVICE') private style: ClientProxy,
+    @Inject('CHAPTER_SERVICE') private chapter: ClientProxy,
   ) { }
 
   // ========== Authentication routes ==========
@@ -191,7 +207,7 @@ export class GatewayController {
   @UseInterceptors(coverImageInterceptor)
   async udpateStory(@Body() data: CreateStoryDto, @Req() req: Request, @UploadedFile() file: Express.Multer.File, @Param('story_id') story_id: string) {
     let filename = 'default-cover.png';
-
+    
     if (file) {
       const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const ext = extname(file.originalname);
@@ -204,14 +220,203 @@ export class GatewayController {
     );
 
     if (res.success === true) {
-      if (file) {
-        const filepath = join('public/assets/coverImages', filename);
-        await fs.promises.writeFile(filepath, file.buffer);
+      if (file && res.old_image) {
+        const oldPath = join('public/assets/coverImages', res.old_image)
+        if (fs.existsSync(oldPath)) {
+          await fs.promises.unlink(oldPath)
+        }
+      }
+
+      // 👉 ghi ảnh mới
+      if (file && filename) {
+        const newPath = join('public/assets/coverImages', filename)
+        await fs.promises.writeFile(newPath, file.buffer)
       }
 
       return { success: true, message: res.message || 'Create story successfully' };
     } else {
       throw new BadRequestException(res.message || 'Create story failed');
+    }
+  }
+
+  // ========== Chapter routes ==========
+
+  @Post('/chapter/create-text-chapter')
+  @UseGuards(AccessTokenAuthorGuard)
+  async createTextChapter(@Body() data: CreateChapterWithTextDto, @Req() req: Request) {
+    const author_id = (req as any).author.user_id
+    const res = await lastValueFrom(this.chapter.send({ cmd: 'create-text-chapter' }, { author_id, ...data }))
+
+    if (res?.success !== true) {
+      throw new BadRequestException(res.message || 'Text chapter created failed');
+    } else {
+      return { success: true, message: res.message || 'Text chapter created successfully' };
+    }
+  }
+
+  @Post('/chapter/update-text-chapter/:chapter_id')
+  @UseGuards(AccessTokenAuthorGuard)
+  async updateTextChapter(@Body() data: UpdateChapterWithTextDto, @Req() req: Request, @Param('chapter_id') chapter_id: string) {
+    const author_id = (req as any).author.user_id
+    const res = await lastValueFrom(this.chapter.send({ cmd: 'update-text-chapter' }, { author_id, chapter_id, ...data }))
+
+    if (res?.success !== true) {
+      throw new BadRequestException(res.message || 'Text chapter update failed');
+    } else {
+      return { success: true, message: res.message || 'Text chapter update successfully' };
+    }
+  }
+
+  @Post('/chapter/create-image-chapter')
+  @UseGuards(AccessTokenAuthorGuard)
+  @UseInterceptors(imageChapterInterceptor)
+  async create(
+    @Body() data: CreateImageChapterDto,
+    @Req() req: Request,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const author_id = (req as any).author.user_id
+
+    const filenames: string[] = []
+
+    // 👉 chuẩn bị tên file WEBP
+    for (const file of files || []) {
+      const name = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.webp`
+      filenames.push(name)
+    }
+
+    data.images = filenames
+
+    // 👉 gọi service tạo chapter + image-chapter
+    const res = await lastValueFrom(
+      this.chapter.send(
+        { cmd: 'create-image-chapter' },
+        { author_id, ...data },
+      ),
+    )
+
+    if (!res?.success) {
+      throw new BadRequestException(res.message || 'Create chapter failed')
+    }
+
+    // 👉 SAU KHI DB OK → mới lưu file
+    const chapterDir = join(
+      process.cwd(),
+      'public/uploads/image-chapters',
+      res.chapter_id,
+    )
+
+    await fs.promises.mkdir(chapterDir, { recursive: true })
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const filename = filenames[i]
+
+      await sharp(file.buffer)
+        .rotate()
+        .webp({ quality: 80 })
+        .toFile(join(chapterDir, filename))
+    }
+
+    return {
+      success: true,
+      message: 'Create image chapter successfully',
+    }
+  }
+
+  @Patch('/chapter/update-image-chapter/:id')
+  @UseGuards(AccessTokenAuthorGuard)
+  @UseInterceptors(imageChapterInterceptor)
+  async update(
+    @Param('id') chapterId: string,
+    @Body() dto: UpdateImageChapterDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    // 1. CHUẨN BỊ LIST ẢNH CŨ (giữ nguyên order)
+    const existingImagesWithOrder = (dto.existing_images || []).map((item) => ({
+      filename: item.url.split('/').pop()!,
+      order: item.order,
+    }))
+
+    // 2. CHUẨN BỊ LIST ẢNH MỚI (map với new_images_meta để lấy order)
+    const newImagesWithOrder: { filename: string; order: number; buffer: Buffer }[] = []
+
+    // Tạo map meta để tra cứu nhanh: originalname -> order
+    const metaMap = new Map<string, number>()
+    if (dto.new_images_meta && Array.isArray(dto.new_images_meta)) {
+      dto.new_images_meta.forEach((m) => metaMap.set(m.originalname, m.order))
+    }
+
+    for (const file of files || []) {
+      // Tìm order tương ứng với tên file gốc
+      const order = metaMap.has(file.originalname) ? metaMap.get(file.originalname)! : 9999
+
+      // Tạo tên file mới
+      const newFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`
+
+      newImagesWithOrder.push({
+        filename: newFilename,
+        order: order,
+        buffer: file.buffer, // Giữ buffer để lưu sau
+      })
+    }
+
+    // 3. GỘP VÀ SẮP XẾP (Merge + Sort)
+    const mergedList = [...existingImagesWithOrder, ...newImagesWithOrder]
+      .sort((a, b) => a.order - b.order) // Sắp xếp theo order tăng dần
+
+    // Trích xuất mảng string tên file cuối cùng để lưu vào DB
+    const finalImages = mergedList.map((i) => i.filename)
+
+    // 4. GỌI MICROSERVICE UPDATE DB
+    const res = await lastValueFrom(
+      this.chapter.send(
+        { cmd: 'update-image-chapter' },
+        {
+          chapter_id: chapterId,
+          title: dto.title,
+          price: dto.price,
+          order: dto.order,
+          is_published: dto.is_published,
+          is_completed: dto.is_completed,
+          images: finalImages, // Gửi danh sách đã sắp xếp chuẩn
+        },
+      ),
+    )
+
+    if (!res?.success) {
+      throw new BadRequestException(res.message || 'Update image chapter failed')
+    }
+
+    // 5. XỬ LÝ FILE SYSTEM (Chỉ làm khi DB update thành công)
+    const chapterDir = join(
+      process.cwd(),
+      'public/uploads/image-chapters',
+      chapterId,
+    )
+    await fs.promises.mkdir(chapterDir, { recursive: true })
+
+    // 5.1 Xoá ảnh thừa (Service trả về danh sách cần xoá)
+    for (const filename of res.images_to_delete || []) {
+      const filePath = join(chapterDir, filename)
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath).catch(e => console.error('Delete file error:', e))
+      }
+    }
+
+    // 5.2 Lưu ảnh mới (Dùng sharp)
+    for (const img of newImagesWithOrder) {
+      await sharp(img.buffer)
+        .rotate()
+        .webp({ quality: 80 })
+        .toFile(join(chapterDir, img.filename))
+    }
+
+    return {
+      success: true,
+      message: 'Update image chapter successfully',
     }
   }
 
@@ -239,6 +444,7 @@ export class GatewayController {
       return { success: true, message: res.message || 'Updated genre successfully' };
     }
   }
+  
   // ========== Style routes ==========
 
   @UseGuards(AccessTokenAdminGuard)
@@ -253,8 +459,9 @@ export class GatewayController {
     }
   }
 
-  @UseGuards(AccessTokenAdminGuard)
+
   @Patch('/style/update/:id')
+  @UseGuards(AccessTokenAdminGuard)
   async updateStyle(@Body() data: CreateStyleDto, @Param('id') id: string) {
     const res = await lastValueFrom(this.style.send({ cmd: 'update-style' }, { id, ...data }))
 

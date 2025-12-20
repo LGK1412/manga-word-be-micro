@@ -53,6 +53,13 @@ import { JwtModule } from '@nestjs/jwt';
           servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
         }
       },
+      {
+        name: 'CHAPTER_SERVICE',
+        transport: Transport.NATS,
+        options: {
+          servers: [process.env.NATS_URL ?? 'nats://localhost:4222']
+        }
+      },
     ]),
 
     JwtModule.register({

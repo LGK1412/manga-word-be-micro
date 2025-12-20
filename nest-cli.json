@@ -25,6 +25,15 @@
         ]
       }
     },
+    "chapter": {
+      "type": "application",
+      "root": "apps/chapter",
+      "entryFile": "main",
+      "sourceRoot": "apps/chapter/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/chapter/tsconfig.app.json"
+      }
+    },
     "common": {
       "type": "library",
       "root": "libs/common",

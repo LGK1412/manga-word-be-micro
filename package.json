@@ -20,8 +20,9 @@
     "start:genre": "nest start genre --watch",
     "start:style": "nest start style --watch",
     "start:story": "nest start story --watch",
-    "start:all-cmd": "start cmd /k \"npm run start:gateway\" & start cmd /k \"npm run start:auth\" & start cmd /k \"npm run start:user\" & start cmd /k \"npm run start:genre\" & start cmd /k \"npm run start:style\" & start cmd /k \"npm run start:story\"",
-    "start:all": "concurrently \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:users\" \"npm run start:genre\" \"npm run start:style\" \"npm run start:story\"",
+    "start:chapter": "nest start chapter --watch",
+    "start:all-cmd": "start cmd /k \"npm run start:gateway\" & start cmd /k \"npm run start:auth\" & start cmd /k \"npm run start:user\" & start cmd /k \"npm run start:genre\" & start cmd /k \"npm run start:style\" & start cmd /k \"npm run start:story\" & start cmd /k \"npm run start:chapter\"",
+    "start:all": "concurrently \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:users\" \"npm run start:genre\" \"npm run start:style\" \"npm run start:story\" \"npm run start:chapter\"",
     "_comment1": "=====ĐÂY LÀ CÁI KẾT THÚC SETUP CHO RUN SERVICE======",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -54,7 +55,8 @@
     "nats": "^2.29.3",
     "nodemailer": "^7.0.10",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

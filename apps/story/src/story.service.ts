@@ -107,12 +107,18 @@ export class StoryService {
       return { success: false, message: 'Some genres are not exist' }
     }
 
+    const old_image = await this.storyModel.findById(story_id).select('coverImage -_id')
+
     try {
       await this.storyModel.findByIdAndUpdate(story_id, updateStory)
-      return { success: true, message: 'Story updated successfully' }
+      return { success: true, old_image: old_image.coverImage, message: 'Story updated successfully' }
     } catch (error) {
       console.log(error)
       return { success: false, message: 'Error when update story' }
     }
+  }
+
+  async getStoryById(story_id: string) {
+    return await this.storyModel.findById(story_id)
   }
 }

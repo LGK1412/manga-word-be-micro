@@ -4,8 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ClientProxy } from '@nestjs/microservices';
 import { randomBytes } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
-import { EmailDto } from 'libs/Dto/auth/email.dto';
-import { RegisterDto } from 'libs/Dto/auth/register.dto';
+import { EmailDto } from 'apps/auth/src/Dto/email.dto';
+import { RegisterDto } from 'apps/auth/src/Dto/register.dto';
 import { last, lastValueFrom } from 'rxjs';
 import { comparePassword, hashPassword } from 'utils/hashing/hashingBcrypt';
 

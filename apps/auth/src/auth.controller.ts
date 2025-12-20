@@ -2,11 +2,11 @@ import { BadRequestException, Controller, Get, Inject } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
-import { RegisterDto } from 'libs/Dto/auth/register.dto';
-import { EmailDto } from 'libs/Dto/auth/email.dto';
-import { VerifyEmailDto } from 'libs/Dto/auth/verifyEmail.dto';
-import { LoginDto } from 'libs/Dto/auth/login.dto';
-import { PassordRecoveryDto } from 'libs/Dto/auth/password-recovery.dto';
+import { RegisterDto } from 'apps/auth/src/Dto/register.dto';
+import { EmailDto } from 'apps/auth/src/Dto/email.dto';
+import { VerifyEmailDto } from 'apps/auth/src/Dto/verifyEmail.dto';
+import { LoginDto } from 'apps/auth/src/Dto/login.dto';
+import { PassordRecoveryDto } from 'apps/auth/src/Dto/password-recovery.dto';
 
 @Controller()
 export class AuthController {

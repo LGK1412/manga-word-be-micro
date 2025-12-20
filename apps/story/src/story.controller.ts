@@ -24,7 +24,12 @@ export class StoryController {
     if (res.success !== true) {
       return { success: false, message: res.message || 'Update story failed' };
     } else {
-      return { success: true, message: res.message || 'Update story successfully' };
+      return { success: true, old_image: res.old_image, message: res.message || 'Update story successfully' };
     }
+  }
+
+  @MessagePattern({ cmd: 'get-story-by-id' })
+  async getStoryById(story_id: string) {
+    return await this.storyService.getStoryById(story_id)
   }
 }
